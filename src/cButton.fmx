@@ -1,0 +1,33 @@
+object cadButton: TcadButton
+  Margins.Left = 5.000000000000000000
+  Margins.Top = 5.000000000000000000
+  Margins.Right = 5.000000000000000000
+  Margins.Bottom = 5.000000000000000000
+  Size.Width = 200.000000000000000000
+  Size.Height = 50.000000000000000000
+  Size.PlatformDefault = False
+  object Background: TRectangle
+    Align = Contents
+    Fill.Color = claBisque
+    Locked = True
+    HitTest = False
+    Padding.Left = 10.000000000000000000
+    Padding.Top = 10.000000000000000000
+    Padding.Right = 10.000000000000000000
+    Padding.Bottom = 10.000000000000000000
+    Size.Width = 200.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+    Stroke.Thickness = 4.000000000000000000
+    XRadius = 20.000000000000000000
+    YRadius = 10.000000000000000000
+    object Text: TText
+      Align = Client
+      Locked = True
+      HitTest = False
+      Size.Width = 180.000000000000000000
+      Size.Height = 30.000000000000000000
+      Size.PlatformDefault = False
+    end
+  end
+end
