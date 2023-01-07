@@ -1,0 +1,59 @@
+terrain de jeu sous forme de tableau rectangulaire dépendant de la taille de l'écran
+
+le joueur possède des couleurs en nombre limité
+il doit les placer sur le terrain de jeu pour qu'elles "murissent"
+la récolte des cases se fait quand elles sont arrivées à terme avant de pourrir, elles augmentent le nombre de cases de chaque couleur disponible à planter
+
+notion de contamination avec couleurs adjacentes pouvant baver sur les autres
+
+le terrain de jeu grossis au fil du temps
+
+----
+
+à l'écran :
+- zone de jeu (où sont les couleurs et où fait la récolte)
+- les cases de couleurs en stock pour les planter / récolter
+- posssibilité de déplacer la zone de jeu pour accéder à sa totalité
+
+----
+
+timer à 1 seconde pour les changements d'état des couleurs plantées
+
+----
+
+Ecrans à développer :
+X - accueil du jeu
+X => background
+X => titre
+X => menu (jouer / reprendre / options / credits / quitter)
+- partie en cours
+X => background
+=> zones de jeu
+=> bouton pause
+- options
+X => background
+X => titre
+=> zone de texte et / ou boutons selon les options du jeu
+X => bouton revenir au menu
+X - crédits du jeu
+X => background
+X => titre
+X => zone de texte
+X => bouton revenir au menu
+
+-----
+
+Données manipulées dans une partie :
+
+- case de couleur
+=> couleur de départ
+=> couleur actuelle
+=> durée de vie
+- grille de jeu
+=> matrice en X,Y,case de couleur
+- inventaire du joueur
+=> liste de cases de couleurs possédées par le joueur en X exemplaires
+
+Données manipulées par l'affichage de l'écran de jeu :
+
+- coordonnées de départ de l'écran (viewport) et largeur/hauteur de la grille affichée
