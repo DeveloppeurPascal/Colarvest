@@ -291,6 +291,12 @@
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="..\Libraries\DzHTMLText\FMX.DzHTMLText.pas"/>
+        <DCCReference Include="uGameData.pas"/>
+        <DCCReference Include="cInventoryItem.pas">
+            <Form>cadInventoryItem</Form>
+            <FormType>fmx</FormType>
+            <DesignClass>TFrame</DesignClass>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

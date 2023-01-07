@@ -11,6 +11,35 @@ object frmMain: TfrmMain
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown
   DesignerMasterStyle = 0
+  object Background: TLayout
+    Align = Contents
+    Size.Width = 640.000000000000000000
+    Size.Height = 480.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 4
+    object BackgroundImage: TRectangle
+      Align = Client
+      Fill.Color = claAzure
+      HitTest = False
+      Size.Width = 640.000000000000000000
+      Size.Height = 480.000000000000000000
+      Size.PlatformDefault = False
+    end
+    object animHideScreen: TFloatAnimation
+      Duration = 0.200000002980232200
+      OnFinish = animHideScreenFinish
+      PropertyName = 'Opacity'
+      StartValue = 1.000000000000000000
+      StopValue = 0.000000000000000000
+    end
+    object animShowScreen: TFloatAnimation
+      Duration = 0.200000002980232200
+      OnFinish = animShowScreenFinish
+      PropertyName = 'Opacity'
+      StartValue = 0.000000000000000000
+      StopValue = 1.000000000000000000
+    end
+  end
   object ScreenHome: TLayout
     Align = Contents
     Size.Width = 640.000000000000000000
@@ -126,8 +155,71 @@ object frmMain: TfrmMain
     Size.Width = 640.000000000000000000
     Size.Height = 480.000000000000000000
     Size.PlatformDefault = False
-    Visible = False
     TabOrder = 2
+    object GameGrid: TImage
+      MultiResBitmap = <
+        item
+        end>
+      Align = Contents
+      Margins.Left = 10.000000000000000000
+      Margins.Top = 10.000000000000000000
+      Margins.Right = 10.000000000000000000
+      Margins.Bottom = 30.000000000000000000
+      Size.Width = 620.000000000000000000
+      Size.Height = 440.000000000000000000
+      Size.PlatformDefault = False
+      WrapMode = Original
+      OnResize = GameGridResize
+    end
+    object PlayerInventory: TRectangle
+      Align = Bottom
+      Fill.Color = claLightcyan
+      Padding.Left = 20.000000000000000000
+      Padding.Top = 5.000000000000000000
+      Padding.Right = 20.000000000000000000
+      Padding.Bottom = 5.000000000000000000
+      Margins.Left = 50.000000000000000000
+      Margins.Top = 5.000000000000000000
+      Margins.Right = 50.000000000000000000
+      Margins.Bottom = 5.000000000000000000
+      Position.X = 50.000000000000000000
+      Position.Y = 415.000000000000000000
+      Size.Width = 540.000000000000000000
+      Size.Height = 60.000000000000000000
+      Size.PlatformDefault = False
+      Stroke.Thickness = 3.000000000000000000
+      XRadius = 30.000000000000000000
+      YRadius = 30.000000000000000000
+    end
+    object btnPauseGame: TRectangle
+      Fill.Color = claBisque
+      Padding.Left = 10.000000000000000000
+      Padding.Top = 10.000000000000000000
+      Padding.Right = 10.000000000000000000
+      Padding.Bottom = 10.000000000000000000
+      Position.X = 4.000000000000000000
+      Position.Y = 4.000000000000000000
+      Size.Width = 50.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      XRadius = 15.000000000000000000
+      YRadius = 15.000000000000000000
+      OnClick = btnPauseGameClick
+      object btnPauseGameSVG: TPath
+        Align = Client
+        Data.Path = {
+          0A00000000000000000060410000984101000000000090410000984101000000
+          000090410000A04001000000000060410000A040000000000000C04000009841
+          01000000000020410000984101000000000020410000A040010000000000C040
+          0000A040010000000000C04000009841030000000000C04000009841}
+        Fill.Color = claBlack
+        HitTest = False
+        Size.Width = 30.000000000000000000
+        Size.Height = 30.000000000000000000
+        Size.PlatformDefault = False
+        Stroke.Kind = None
+      end
+    end
   end
   object ScreenCredit: TLayout
     Align = Contents
@@ -215,36 +307,6 @@ object frmMain: TfrmMain
       TabOrder = 0
       Viewport.Width = 630.000000000000000000
       Viewport.Height = 410.000000000000000000
-    end
-  end
-  object Background: TLayout
-    Align = Contents
-    Size.Width = 640.000000000000000000
-    Size.Height = 480.000000000000000000
-    Size.PlatformDefault = False
-    Visible = False
-    TabOrder = 4
-    object Rectangle1: TRectangle
-      Align = Client
-      Fill.Color = claAzure
-      HitTest = False
-      Size.Width = 640.000000000000000000
-      Size.Height = 480.000000000000000000
-      Size.PlatformDefault = False
-    end
-    object animHideScreen: TFloatAnimation
-      Duration = 0.200000002980232200
-      OnFinish = animHideScreenFinish
-      PropertyName = 'Opacity'
-      StartValue = 1.000000000000000000
-      StopValue = 0.000000000000000000
-    end
-    object animShowScreen: TFloatAnimation
-      Duration = 0.200000002980232200
-      OnFinish = animShowScreenFinish
-      PropertyName = 'Opacity'
-      StartValue = 0.000000000000000000
-      StopValue = 1.000000000000000000
     end
   end
   object GameTitle: TLayout

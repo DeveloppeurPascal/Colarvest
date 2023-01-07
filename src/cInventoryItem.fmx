@@ -1,0 +1,41 @@
+object cadInventoryItem: TcadInventoryItem
+  Align = Left
+  Margins.Left = 5.000000000000000000
+  Margins.Top = 5.000000000000000000
+  Margins.Bottom = 5.000000000000000000
+  Position.X = 5.000000000000000000
+  Position.Y = 5.000000000000000000
+  Size.Width = 320.000000000000000000
+  Size.Height = 79.000000000000000000
+  Size.PlatformDefault = False
+  OnResize = FrameResize
+  object Background: TRectangle
+    Align = Contents
+    Locked = True
+    HitTest = False
+    Size.Width = 320.000000000000000000
+    Size.Height = 79.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object ItemCountBackground: TEllipse
+    Align = Center
+    Fill.Color = claRed
+    Locked = True
+    HitTest = False
+    Opacity = 0.300000011920929000
+    Size.Width = 50.000000000000000000
+    Size.Height = 30.000000000000000000
+    Size.PlatformDefault = False
+    Stroke.Kind = None
+  end
+  object ItemCount: TText
+    Align = Center
+    AutoSize = True
+    Locked = True
+    HitTest = False
+    Size.Width = 25.234375000000000000
+    Size.Height = 15.960937500000000000
+    Size.PlatformDefault = False
+    Text = 'XXX'
+  end
+end

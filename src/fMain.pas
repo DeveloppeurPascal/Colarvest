@@ -11,10 +11,12 @@ uses
 
 Const
   CDefaultMarginsTop = 5;
+  // top margin of content text on screens with Title visible
+  CGameCellSize = 50; // Widht/Height of a drawn cell on the game grid
 
 type
 {$SCOPEDENUMS ON}
-  TGameScreen = (Home, Credit, Options, Game);
+  TGameScreen = (Home, Credit, Options, GameStart, GameContinue);
 
   TfrmMain = class(TForm)
     ScreenHome: TLayout;
@@ -22,7 +24,7 @@ type
     ScreenCredit: TLayout;
     ScreenSettings: TLayout;
     Background: TLayout;
-    Rectangle1: TRectangle;
+    BackgroundImage: TRectangle;
     animHideScreen: TFloatAnimation;
     animShowScreen: TFloatAnimation;
     GameTitle: TLayout;
@@ -38,6 +40,10 @@ type
     ScreenCreditContent: TVertScrollBox;
     ScreenCreditText: TDzHTMLText;
     ScreenSettingsContent: TVertScrollBox;
+    PlayerInventory: TRectangle;
+    btnPauseGame: TRectangle;
+    btnPauseGameSVG: TPath;
+    GameGrid: TImage;
     procedure FormCreate(Sender: TObject);
     procedure animHideScreenFinish(Sender: TObject);
     procedure animShowScreenFinish(Sender: TObject);
@@ -49,9 +55,12 @@ type
     procedure btnBackClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
+    procedure btnPauseGameClick(Sender: TObject);
+    procedure GameGridResize(Sender: TObject);
   private
     { Déclarations privées }
     DisplayedScreen: TLayout;
+    GridViewportX, GridViewportY: integer;
   public
     { Déclarations publiques }
     procedure DisplayScreen(ScreenToDisplay: TGameScreen);
@@ -61,6 +70,8 @@ type
     procedure InitSettingsScreen;
     procedure CalcScreenHomeMenuHeight;
     procedure PauseGame;
+    procedure InitGameStart(ContinuePreviousGame: boolean = false);
+    procedure RefreshGameGrid;
   end;
 
 var
@@ -69,6 +80,8 @@ var
 implementation
 
 {$R *.fmx}
+
+uses uGameData, cInventoryItem;
 
 procedure TfrmMain.animHideScreenFinish(Sender: TObject);
 begin
@@ -94,8 +107,7 @@ end;
 
 procedure TfrmMain.btnMenuContinueClick(Sender: TObject);
 begin
-  // TODO : continue prevous game (after a pause)
-  DisplayScreen(TGameScreen.Game);
+  DisplayScreen(TGameScreen.GameContinue);
 end;
 
 procedure TfrmMain.btnMenuCreditsClick(Sender: TObject);
@@ -115,8 +127,12 @@ end;
 
 procedure TfrmMain.btnMenuPlayClick(Sender: TObject);
 begin
-  // TODO : initialiser une nouvelle partie
-  DisplayScreen(TGameScreen.Game);
+  DisplayScreen(TGameScreen.GameStart);
+end;
+
+procedure TfrmMain.btnPauseGameClick(Sender: TObject);
+begin
+  PauseGame;
 end;
 
 procedure TfrmMain.CalcScreenHomeMenuHeight;
@@ -177,8 +193,15 @@ begin
           end);
         NewScreen := ScreenSettings;
       end;
-    TGameScreen.Game:
-      NewScreen := ScreenGame;
+    TGameScreen.GameStart, TGameScreen.GameContinue:
+      begin
+        tthread.ForceQueue(nil,
+          procedure
+          begin
+            InitGameStart(ScreenToDisplay = TGameScreen.GameContinue);
+          end);
+        NewScreen := ScreenGame;
+      end;
   else
     raise exception.Create('Unknow Screen to display.');
   end;
@@ -262,7 +285,7 @@ begin
     begin
       Key := 0;
       KeyChar := #0;
-      PauseGame;
+      btnPauseGame.onclick(Self);
     end
 {$IF Defined(IOS) or Defined(ANDROID)}
     else;
@@ -277,10 +300,49 @@ begin
   end;
 end;
 
+procedure TfrmMain.GameGridResize(Sender: TObject);
+begin
+  GameGrid.Bitmap.SetSize(trunc(GameGrid.Width), trunc(GameGrid.Height));
+  if (ScreenGame.Visible) then
+    RefreshGameGrid;
+end;
+
 procedure TfrmMain.InitCreditScreen;
 begin
   ScreenCreditContent.margins.top := GameTitle.Position.Y + GameTitle.Height +
     GameTitle.margins.top + GameTitle.margins.bottom + CDefaultMarginsTop;
+end;
+
+procedure TfrmMain.InitGameStart(ContinuePreviousGame: boolean);
+var
+  GameData: TGameData;
+  InventoryItemBox: tcadInventoryItem;
+begin
+  // Init or load game data
+  GameData := TGameData.Current;
+  if ContinuePreviousGame then
+    GameData.LoadFromFile('PreviousGameData')
+    // TODO : change game data filename
+  else
+    GameData.NewGame;
+
+  // Init the game screen
+  while PlayerInventory.ChildrenCount > 0 do
+    PlayerInventory.Children[0].Free;
+
+  for var i := 0 to GameData.inventory.count - 1 do
+  begin
+    InventoryItemBox := tcadInventoryItem.Create(Self);
+    InventoryItemBox.Parent := PlayerInventory;
+    InventoryItemBox.InventoryItem := GameData.inventory.Get(i);
+  end;
+
+  GridViewportX := CGameGridWidth div 2;
+  GridViewportY := CGameGridHeight div 2;
+
+  RefreshGameGrid;
+
+  // TODO : à compléter
 end;
 
 procedure TfrmMain.InitGameText;
@@ -315,9 +377,60 @@ end;
 
 procedure TfrmMain.PauseGame;
 begin
-  // TODO : do what is needed when teh game is stopped
+  // TODO : do what is needed when the game is stopped
 
   DisplayScreen(TGameScreen.Home);
 end;
+
+procedure TfrmMain.RefreshGameGrid;
+var
+  NbCol, NbRow: integer;
+  GameData: TGameData;
+  item: TGameItem;
+  GridCanvas: tcanvas;
+  x, Y, w, h: single;
+  bmpscale: single;
+begin
+  GameData := TGameData.Current;
+
+  NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
+  NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
+
+  bmpscale := GameGrid.Bitmap.BitmapScale;
+  GameGrid.BeginUpdate;
+  try
+    GridCanvas := GameGrid.Bitmap.Canvas;
+    GridCanvas.BeginScene;
+    try
+      GridCanvas.Clear(talphacolors.Darkorange);
+      for var i := 0 to NbCol - 1 do
+        for var j := 0 to NbRow - 1 do
+        begin
+          item := GameData.GameGrid.GetItem(GridViewportX + i,
+            GridViewportY + j);
+          if assigned(item) then
+          begin
+            x := i * CGameCellSize * bmpscale;
+            Y := j * CGameCellSize * bmpscale;
+            w := CGameCellSize * bmpscale;
+            h := CGameCellSize * bmpscale;
+            GridCanvas.Fill.Color := item.Color;
+            GridCanvas.Fill.Kind := TBrushKind.Solid;
+            GridCanvas.FillRect(trectf.Create(x, Y, x + w, Y + h), 1);
+          end;
+        end;
+    finally
+      GridCanvas.endscene;
+    end;
+  finally
+    GameGrid.endupdate;
+  end;
+end;
+
+initialization
+
+{$IFDEF DEBUG}
+  ReportMemoryLeaksOnShutdown := true;
+{$ENDIF}
 
 end.
