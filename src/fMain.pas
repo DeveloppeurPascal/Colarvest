@@ -7,7 +7,7 @@ uses
   System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Layouts,
   FMX.Objects, FMX.Ani, FMX.StdCtrls, FMX.Controls.Presentation, cButton,
-  FMX.DzHTMLText, cInventoryItem;
+  FMX.DzHTMLText, cInventoryItem, uGameData;
 
 Const
   CDefaultMarginsTop = 5;
@@ -84,6 +84,11 @@ type
     procedure PauseGame;
     procedure InitGameStart(ContinuePreviousGame: boolean = false);
     procedure RefreshGameGrid;
+    procedure DrawGameItem(item: tgameitem);
+    procedure DrawGameCell(col, lig: integer);
+    procedure DrawCell(X, Y: Single; Canvas: TCanvas; BitmapScale: Single;
+      item: tgameitem);
+    procedure AddInventoryItemButton(InventoryItem: TInventoryItem);
   end;
 
 var
@@ -93,7 +98,18 @@ implementation
 
 {$R *.fmx}
 
-uses uGameData, udmLDJam52_Icones_AS303523361;
+uses udmLDJam52_Icones_AS303523361;
+
+procedure TfrmMain.AddInventoryItemButton(InventoryItem: TInventoryItem);
+var
+  InventoryItemBox: TcadInventoryItem;
+begin
+  InventoryItemBox := TcadInventoryItem.Create(Self);
+  InventoryItemBox.Parent := PlayerInventory;
+  InventoryItemBox.OnSelectInventoryItem := SelectInventoryItem;
+  InventoryItemBox.OnunSelectInventoryItem := UnSelectInventoryItem;
+  InventoryItemBox.InventoryItem := InventoryItem;
+end;
 
 procedure TfrmMain.animHideScreenFinish(Sender: TObject);
 begin
@@ -172,42 +188,70 @@ var
   NbCol, NbRow: integer;
   GameData: tgamedata;
   Grid: TGameGrid;
-begin
-  if assigned(SelectedInventoryItem) then
+  item: tgameitem;
+
+  procedure IncreaseInventoryItemCount(Color: TGameItemColor; Value: integer);
+  var
+    InventoryItem: TInventoryItem;
   begin
-    // color selected => put color on the game grid
-
-    // Nb displayed col/row
-    NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
-    NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
-
-    // local coordinates to absolute coordinates
-    col := trunc(X / CGameCellSize) + GridViewportX - NbCol div 2;
-    row := trunc(Y / CGameCellSize) + GridViewportY - NbRow div 2;
-
-    GameData := tgamedata.Current;
-    Grid := GameData.GameGrid;
-
-    if assigned(Grid.GetItem(col, row)) then
-    begin
-      // already something there
-      // TODO : à compléter
-    end
+    InventoryItem := GameData.Inventory.Get(Color);
+    if assigned(InventoryItem) then
+      InventoryItem.Count := InventoryItem.Count + Value
     else
     begin
-      // nothing at this position
-      var
-      item := SelectedInventoryItem.GetGameItem;
-      Grid.SetItem(col, row, item);
-      item.onstatechange := GameItemStateChanged;
-      item.OnColorChange := GameItemColorChanged;
-      SelectedInventoryItem.Count := SelectedInventoryItem.Count - 1;
-      RefreshGameGrid; // TODO : draw only this cell, not the grid
+      InventoryItem := TInventoryItem.Create(GameData.Inventory);
+      InventoryItem.Count := Value;
+      InventoryItem.Color := Color;
+      AddInventoryItemButton(InventoryItem);
+    end;
+  end;
+
+begin
+  // Nb displayed col/row
+  NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
+  NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
+
+  // local coordinates to absolute coordinates
+  col := trunc(X / CGameCellSize) + GridViewportX - NbCol div 2;
+  row := trunc(Y / CGameCellSize) + GridViewportY - NbRow div 2;
+
+  GameData := tgamedata.Current;
+  Grid := GameData.GameGrid;
+
+  item := Grid.GetItem(col, row);
+  if assigned(item) then
+  begin
+    // already something there
+    case item.state of
+      tgameitemstate.Mature:
+        begin
+          IncreaseInventoryItemCount(item.startColor, 10);
+          Grid.RemoveItem(col, row);
+          DrawGameCell(col, row);
+        end;
+      tgameitemstate.rotten:
+        begin
+          IncreaseInventoryItemCount(item.startColor, 4);
+          Grid.RemoveItem(col, row);
+          DrawGameCell(col, row);
+        end;
+      tgameitemstate.compost:
+        begin
+          IncreaseInventoryItemCount(item.startColor, 2);
+          Grid.RemoveItem(col, row);
+          DrawGameCell(col, row);
+        end;
     end;
   end
-  else
+  else if assigned(SelectedInventoryItem) then
   begin
-    // no color selected, harvest actual grid cell or move screen (?) or zoom (?)
+    // color selected => put color on the game grid
+    item := SelectedInventoryItem.GetGameItem;
+    Grid.SetItem(col, row, item);
+    item.onstatechange := GameItemStateChanged;
+    item.OnColorChange := GameItemColorChanged;
+    SelectedInventoryItem.Count := SelectedInventoryItem.Count - 1;
+    DrawGameItem(item);
   end;
 end;
 
@@ -228,6 +272,7 @@ begin
     Background.Visible := true;
     Background.BringToFront;
   end;
+  BackgroundImage.Fill.Color := talphacolors.azure;
 
   case ScreenToDisplay of
     TGameScreen.Home:
@@ -287,6 +332,120 @@ begin
   // Show/Hide game title on top of the screen
   DisplayGameTitle(ScreenToDisplay in [TGameScreen.Home, TGameScreen.Credit,
     TGameScreen.Options]);
+end;
+
+procedure TfrmMain.DrawCell(X, Y: Single; Canvas: TCanvas; BitmapScale: Single;
+item: tgameitem);
+var
+  w, h: Single;
+  bmp: tbitmap;
+  s: tsizef;
+begin
+  w := CGameCellSize * BitmapScale;
+  h := CGameCellSize * BitmapScale;
+  if assigned(item) then
+  begin
+    Canvas.Fill.Color := item.Color;
+    Canvas.Fill.Kind := TBrushKind.Solid;
+    Canvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
+    s := tsizef.Create(2 * w / 3, 2 * h / 3);
+    case item.state of
+      tgameitemstate.Planted:
+        bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 4);
+      tgameitemstate.Mature:
+        bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 6);
+      tgameitemstate.rotten:
+        bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 5);
+      tgameitemstate.Dead:
+        bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 1);
+      tgameitemstate.compost:
+        bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 2);
+    else
+      raise exception.Create('No icon for this item state.');
+    end;
+    Canvas.DrawBitmap(bmp, bmp.boundsf, trectf.Create(X, Y, X + w, Y + h), 1);
+    // TODO : add margin to destination
+  end
+  else
+  begin
+    Canvas.Fill.Color := cgridcolor;
+    // TODO : grid background color
+    Canvas.Fill.Kind := TBrushKind.Solid;
+    Canvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
+  end;
+end;
+
+procedure TfrmMain.DrawGameCell(col, lig: integer);
+var
+  NbCol, NbRow: integer;
+  X, Y: Single;
+begin
+  if not GameStarted then
+    exit;
+
+  NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
+  NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
+
+  if (col < GridViewportX - NbCol div 2) or (col > GridViewportX + NbCol div 2)
+    or (lig < GridViewportY - NbRow div 2) or (lig > GridViewportY + NbRow div 2)
+  then
+    exit;
+
+  GameGrid.BeginUpdate;
+  try
+    GameGrid.Bitmap.Canvas.BeginScene;
+    try
+      // draw the item cell and its picture
+      X := (col - GridViewportX + NbCol div 2) * CGameCellSize *
+        GameGrid.Bitmap.BitmapScale;
+      Y := (lig - GridViewportY + NbRow div 2) * CGameCellSize *
+        GameGrid.Bitmap.BitmapScale;
+      DrawCell(X, Y, GameGrid.Bitmap.Canvas, GameGrid.Bitmap.BitmapScale, nil);
+    finally
+      GameGrid.Bitmap.Canvas.endscene;
+    end;
+  finally
+    GameGrid.endupdate;
+  end;
+end;
+
+procedure TfrmMain.DrawGameItem(item: tgameitem);
+var
+  NbCol, NbRow: integer;
+  X, Y: Single;
+begin
+  if not GameStarted then
+    exit;
+
+  if (not assigned(item)) or (item.state = tgameitemstate.nothing) or
+    (item.state = tgameitemstate.Disable) then
+    exit;
+
+  NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
+  NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
+
+  if (item.X < GridViewportX - NbCol div 2) or
+    (item.X > GridViewportX + NbCol div 2) or
+    (item.Y < GridViewportY - NbRow div 2) or
+    (item.Y > GridViewportY + NbRow div 2) then
+    exit;
+
+  GameGrid.BeginUpdate;
+  try
+    GameGrid.Bitmap.Canvas.BeginScene;
+    try
+      // draw the item cell and its picture
+      X := (item.X - GridViewportX + NbCol div 2) * CGameCellSize *
+        GameGrid.Bitmap.BitmapScale;
+      Y := (item.Y - GridViewportY + NbRow div 2) * CGameCellSize *
+        GameGrid.Bitmap.BitmapScale;
+      DrawCell(X, Y, GameGrid.Bitmap.Canvas, GameGrid.Bitmap.BitmapScale, item);
+    finally
+      GameGrid.Bitmap.Canvas.endscene;
+    end;
+  finally
+    GameGrid.endupdate;
+  end;
 end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
@@ -382,8 +541,8 @@ var
 begin
   if not(Sender is tgameitem) then
     exit;
-
-  RefreshGameGrid; // TODO : refresh only this element if its displayed
+  item := Sender as tgameitem;
+  DrawGameItem(item);
 end;
 
 procedure TfrmMain.GameItemStateChanged(Sender: TObject);
@@ -392,10 +551,8 @@ var
 begin
   if not(Sender is tgameitem) then
     exit;
-
   item := Sender as tgameitem;
-
-  // TODO : à compléter
+  DrawGameItem(item);
 end;
 
 procedure TfrmMain.InitCreditScreen;
@@ -409,6 +566,8 @@ var
   GameData: tgamedata;
   InventoryItemBox: TcadInventoryItem;
 begin
+  BackgroundImage.Fill.Color := talphacolors.black;
+
   SelectedInventoryItem := nil;
 
   // Init the game screen
@@ -425,14 +584,8 @@ begin
 
   GameStarted := true;
 
-  for var i := 0 to GameData.inventory.Count - 1 do
-  begin
-    InventoryItemBox := TcadInventoryItem.Create(Self);
-    InventoryItemBox.Parent := PlayerInventory;
-    InventoryItemBox.OnSelectInventoryItem := SelectInventoryItem;
-    InventoryItemBox.OnunSelectInventoryItem := UnSelectInventoryItem;
-    InventoryItemBox.InventoryItem := GameData.inventory.Get(i);
-  end;
+  for var i := 0 to GameData.Inventory.Count - 1 do
+    AddInventoryItemButton(GameData.Inventory.Get(i));
 
   // The viewport (X,Y) is the center of the screen, not the top/left coordinates
   GridViewportX := CGameGridWidth div 2;
@@ -440,8 +593,6 @@ begin
 
   // Show the game grid
   RefreshGameGrid;
-
-  // TODO : à compléter
 
   // Last operation : starting the game loop
   GameLoop.enabled := true;
@@ -463,6 +614,7 @@ begin
   try
     ScreenCreditText.Text := '<b>' + GameTitleText.Text + '</b><br>' +
       '(c) Patrick Prémartin 2023<br>' + '<br>' +
+      'Some pictures are under license from Google and Adobe Stock.<br>' +
       'Thanks to <a:https://github.com/digao-dalpiaz>Rodrigo Depiné Dalpiaz</a> for his <a:https://github.com/digao-dalpiaz/DzHTMLText>DzHTMLText</a> component.';
   finally
     ScreenCreditText.endupdate;
@@ -481,6 +633,7 @@ procedure TfrmMain.PauseGame;
 begin
   // TODO : do what is needed when the game is stopped
   GameStarted := false;
+  GameLoop.enabled := false;
   DisplayScreen(TGameScreen.Home);
 end;
 
@@ -489,12 +642,9 @@ var
   NbCol, NbRow: integer;
   GameData: tgamedata;
   item: tgameitem;
-  GridCanvas: tcanvas;
-  X, Y, w, h: Single;
-  bmpscale: Single;
+  GridCanvas: TCanvas;
+  X, Y: Single;
   i, j: integer;
-  bmp: tbitmap;
-  s: tsizef;
 begin
   if not GameStarted then
     exit;
@@ -504,45 +654,28 @@ begin
   NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
   NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
 
-  bmpscale := GameGrid.Bitmap.BitmapScale;
   GameGrid.BeginUpdate;
   try
     GridCanvas := GameGrid.Bitmap.Canvas;
     GridCanvas.BeginScene;
     try
-      GridCanvas.Clear(talphacolors.Darkorange);
+      GridCanvas.Clear(cgridcolor);
+      // TODO : game grid background color
       for i := 0 to NbCol - 1 do
         for j := 0 to NbRow - 1 do
         begin
           // Viewport(x,y) is the center, we need the displayed cell on top/left of the screen
           item := GameData.GameGrid.GetItem(GridViewportX + i - NbCol div 2,
             GridViewportY + j - NbRow div 2);
-          if assigned(item) then
+
+          // draw the item cell and its picture
+          if assigned(item) and (item.state <> tgameitemstate.nothing) and
+            (item.state <> tgameitemstate.Disable) then
           begin
-            X := i * CGameCellSize * bmpscale;
-            Y := j * CGameCellSize * bmpscale;
-            w := CGameCellSize * bmpscale;
-            h := CGameCellSize * bmpscale;
-            GridCanvas.Fill.Color := item.Color;
-            GridCanvas.Fill.Kind := TBrushKind.Solid;
-            GridCanvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
-            s := tsizef.Create(2 * w / 3, 2 * h / 3);
-            case item.State of
-              TGameItemState.Planted:
-                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 4);
-              TGameItemState.Mature:
-                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 6);
-              TGameItemState.Rotten:
-                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 5);
-              TGameItemState.Dead:
-                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 1);
-              TGameItemState.compost:
-                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 2);
-            else
-              raise exception.Create('No icon for this item state.');
-            end;
-            GridCanvas.DrawBitmap(bmp, bmp.boundsf, trectf.Create(X, Y, X + w,
-              Y + h), 1);// TODO : add margin to destination
+            X := i * CGameCellSize * GameGrid.Bitmap.BitmapScale;
+            Y := j * CGameCellSize * GameGrid.Bitmap.BitmapScale;
+            DrawCell(X, Y, GameGrid.Bitmap.Canvas,
+              GameGrid.Bitmap.BitmapScale, item)
           end;
         end;
     finally

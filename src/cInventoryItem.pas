@@ -12,7 +12,6 @@ type
   TcadInventoryItem = class(TFrame)
     Background: TRectangle;
     ItemCount: TText;
-    ItemCountBackground: TEllipse;
     procedure FrameResize(Sender: TObject);
     procedure FrameClick(Sender: TObject);
   private
@@ -29,6 +28,7 @@ type
     function GetColor: TGameItemColor;
     procedure SetOnSelectInventoryItem(const Value: tnotifyevent);
     procedure SetOnUnSelectInventoryItem(const Value: tnotifyevent);
+    procedure ItemCountChange(Sender: TObject);
   public
     { Déclarations publiques }
     property InventoryItem: TInventoryItem read FInventoryItem
@@ -107,6 +107,12 @@ begin
   result.Duration := 0;
 end;
 
+procedure TcadInventoryItem.ItemCountChange(Sender: TObject);
+begin
+  if assigned(FInventoryItem) then
+    ItemCount.Text := FInventoryItem.Count.ToString;
+end;
+
 procedure TcadInventoryItem.KillMySelf;
 begin
   Active := false;
@@ -146,7 +152,6 @@ end;
 
 procedure TcadInventoryItem.SetCount(const Value: integer);
 begin
-  ItemCount.Text := Value.ToString;
   if (Value < 1) then
     KillMySelf
   else if assigned(FInventoryItem) then
@@ -160,7 +165,7 @@ begin
     FInventoryItem := Value;
     Background.Fill.Color := FInventoryItem.Color;
     ItemCount.Text := FInventoryItem.Count.ToString;
-    // TODO : add event to link inventory item and its display
+    FInventoryItem.OnCountChange := ItemCountChange;
   end
   else // TODO: potential memory lost if value assigned with count=0
     KillMySelf;

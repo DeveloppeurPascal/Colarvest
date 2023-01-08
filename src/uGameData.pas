@@ -11,9 +11,14 @@ Const
   CGameGridWidth = 100;
   CGameGridHeight = 100;
 
+  CGridColor = $FFA37929;
+  CDeadCellColor = $FFAA9E88;
+  CCompostCellColor = $FFF5E475;
+
 type
 {$SCOPEDENUMS ON}
-  TGameItemState = (Nothing, Planted, Mature, Rotten, Dead, Compost);
+  TGameItemState = (Nothing = -1, Planted = 0, Mature = 30, Rotten = 50,
+    Dead = 60, Compost = 120, Disable = 180);
   TGameItemColor = TAlphaColor; // ARVB colors (alpha, red, green, blue)
 
   TGameItem = class
@@ -25,6 +30,7 @@ type
     FY: integer;
     FOnStateChange: TNotifyEvent;
     FOnColorChange: TNotifyEvent;
+    FStartColor: TGameItemColor;
     procedure SetColor(const Value: TGameItemColor);
     procedure SetDuration(const Value: integer);
     procedure SetState(const Value: TGameItemState);
@@ -37,6 +43,7 @@ type
     property OnStateChange: TNotifyEvent read FOnStateChange
       write SetOnStateChange;
     property Color: TGameItemColor read FColor write SetColor;
+    property StartColor: TGameItemColor read FStartColor;
     property OnColorChange: TNotifyEvent read FOnColorChange
       write SetOnColorChange;
     property Duration: integer read FDuration write SetDuration;
@@ -72,11 +79,15 @@ type
   TInventoryItem = class(TGameItem)
   private
     FCount: integer;
+    FOnCountChange: TNotifyEvent;
     procedure SetCount(const Value: integer);
+    procedure SetOnCountChange(const Value: TNotifyEvent);
   protected
     Parent: TInventory;
   public
     property Count: integer read FCount write SetCount;
+    property OnCountChange: TNotifyEvent read FOnCountChange
+      write SetOnCountChange;
     constructor Create(Inventory: TInventory); overload; virtual;
     destructor Destroy; override;
     procedure SaveToStream(AStream: TStream); override;
@@ -92,7 +103,8 @@ type
   public
     property Count: integer read GetCount;
     function Add(Item: TInventoryItem): integer;
-    function Get(Index: integer): TInventoryItem;
+    function Get(Index: integer): TInventoryItem; overload;
+    function Get(Color: TGameItemColor): TInventoryItem; overload;
     procedure Remove(Item: TInventoryItem); overload;
     procedure SaveToStream(AStream: TStream);
     procedure LoadFromStream(AStrem: TStream);
@@ -217,9 +229,6 @@ begin
     else
       raise exception.Create('No default color available !');
     end;
-    // Item.Color := TAlphaColorRec.Alpha or
-    // TAlphaColor((random(256) { R } * 256 + random(256) { V } ) * 256 +
-    // random(256) { B } );
   end;
 end;
 
@@ -257,6 +266,7 @@ constructor TGameItem.Create;
 begin
   FState := TGameItemState.Nothing;
   FColor := 0;
+  FStartColor := 0;
   FDuration := 0;
   FX := -1;
   FY := -1;
@@ -270,38 +280,72 @@ begin
 end;
 
 procedure TGameItem.ExecGameLoop;
+
+  procedure Contamination(X, Y: integer);
+  var
+    Item: TGameItem;
+  begin
+    Item := TGameData.Current.GameGrid.GetItem(X, Y);
+    if assigned(Item) and (Item.Duration < ord(TGameItemState.Rotten)) then
+      Item.Duration := ord(TGameItemState.Rotten);
+  end;
+
 var
   colrec: talphacolorrec;
 begin
   Duration := Duration + 1;
 
-  if Duration > 160 then
+  if Duration > ord(TGameItemState.Disable) then
     // TODO : kill my self
-  else if Duration > 110 then
-    State := TGameItemState.Compost
-  else if Duration > 80 then
+  else if Duration >= ord(TGameItemState.Compost) then
+  begin
+    State := TGameItemState.Compost;
+    Color := CCompostCellColor;
+  end
+  else if Duration >= ord(TGameItemState.Dead) then
   begin
     State := TGameItemState.Dead;
+    Color := CDeadCellColor;
+
+    // contamination
+    Contamination(X - 1, Y - 1);
+    Contamination(X - 1, Y);
+    Contamination(X - 1, Y + 1);
+    Contamination(X, Y - 1);
+    Contamination(X, Y + 1);
+    Contamination(X + 1, Y - 1);
+    Contamination(X + 1, Y);
+    Contamination(X + 1, Y + 1);
   end
-  else if Duration > 60 then
+  else if Duration >= ord(TGameItemState.Rotten) then
     State := TGameItemState.Rotten
-  else if Duration > 30 then
+  else if Duration >= ord(TGameItemState.Mature) then
     State := TGameItemState.Mature;
 
-  if (Duration > 0) then
-    case State of
-      TGameItemState.Rotten, TGameItemState.Mature, TGameItemState.Compost:
-        begin
-          colrec := talphacolorrec.Create(Color);
-          if (colrec.R < 255) then
-            colrec.R := colrec.R + 1;
-          if (colrec.g < 255) then
-            colrec.g := colrec.g + 1;
-          if (colrec.b < 255) then
-            colrec.b := colrec.b + 1;
-          Color := colrec.Color;
-        end;
-    end;
+  case State of
+    TGameItemState.Planted:
+      begin
+        colrec := talphacolorrec.Create(Color);
+        if (colrec.R <= 255 - 3) then
+          colrec.R := colrec.R + 3;
+        if (colrec.g <= 255 - 3) then
+          colrec.g := colrec.g + 3;
+        if (colrec.b <= 255 - 3) then
+          colrec.b := colrec.b + 3;
+        Color := colrec.Color;
+      end;
+    TGameItemState.Rotten, TGameItemState.Mature:
+      begin
+        colrec := talphacolorrec.Create(Color);
+        if (colrec.R > 3) then
+          colrec.R := colrec.R - 3;
+        if (colrec.g > 3) then
+          colrec.g := colrec.g - 3;
+        if (colrec.b > 3) then
+          colrec.b := colrec.b - 3;
+        Color := colrec.Color;
+      end;
+  end;
 end;
 
 procedure TGameItem.LoadFromStream(AStrem: TStream);
@@ -318,6 +362,8 @@ procedure TGameItem.SetColor(const Value: TGameItemColor);
 begin
   if (FColor <> Value) then
   begin
+    if FStartColor = 0 then
+      FStartColor := Value;
     FColor := Value;
     if assigned(OnColorChange) then
       OnColorChange(Self);
@@ -409,6 +455,7 @@ procedure TGameGrid.RemoveItem(X, Y: integer);
 begin
   if assigned(GetItem(X, Y)) then
     FGrid.Items[X].Remove(Y);
+  // TODO : fuite de mémoire possible si TObjectDictionary foireux
 end;
 
 procedure TGameGrid.SaveToStream(AStream: TStream);
@@ -460,6 +507,18 @@ begin
     result := Items[index]
   else
     result := nil;
+end;
+
+function TInventory.Get(Color: TGameItemColor): TInventoryItem;
+begin
+  result := nil;
+  if (Items.Count > 0) then
+    for var Item in Items do
+      if Item.Color = Color then
+      begin
+        result := Item;
+        exit;
+      end;
 end;
 
 function TInventory.GetCount: integer;
@@ -514,7 +573,13 @@ end;
 procedure TInventoryItem.SetCount(const Value: integer);
 begin
   FCount := Value;
-  // TODO : à compléter
+  if assigned(OnCountChange) then
+    OnCountChange(Self);
+end;
+
+procedure TInventoryItem.SetOnCountChange(const Value: TNotifyEvent);
+begin
+  FOnCountChange := Value;
 end;
 
 initialization
