@@ -32,14 +32,21 @@ type
     procedure LoadFromStream(AStrem: TStream); virtual;
   end;
 
+  TRowList = TObjectDictionary<integer, TGameItem>;
+  TColList = TObjectDictionary<integer, TRowList>;
+
   TGameGrid = class
   private
+    FGrid: TColList;
   public
     procedure SetItem(X, Y: integer; Item: TGameItem);
     function GetItem(X, Y: integer): TGameItem;
+    procedure RemoveItem(X, Y: integer);
     procedure SaveToStream(AStream: TStream);
     procedure LoadFromStream(AStrem: TStream);
     procedure Clear;
+    constructor Create; virtual;
+    destructor Destroy; override;
   end;
 
   TInventory = class;
@@ -53,11 +60,12 @@ type
   public
     property Count: integer read FCount write SetCount;
     constructor Create(Inventory: TInventory); virtual;
+    destructor Destroy; override;
     procedure SaveToStream(AStream: TStream); override;
     procedure LoadFromStream(AStrem: TStream); override;
   end;
 
-  TInventoryItemList = TObjectList<TInventoryItem>;
+  TInventoryItemList = TList<TInventoryItem>;
 
   TInventory = class
   private
@@ -68,7 +76,6 @@ type
     function Add(Item: TInventoryItem): integer;
     function Get(Index: integer): TInventoryItem;
     procedure Remove(Item: TInventoryItem); overload;
-    procedure Remove(Index: integer); overload;
     procedure SaveToStream(AStream: TStream);
     procedure LoadFromStream(AStrem: TStream);
     procedure Clear;
@@ -233,20 +240,38 @@ end;
 
 procedure TGameGrid.Clear;
 begin
-  // TODO : à compléter
+  FGrid.Clear;
+end;
+
+constructor TGameGrid.Create;
+begin
+  FGrid := TColList.Create;
+end;
+
+destructor TGameGrid.Destroy;
+begin
+  FGrid.Free;
+  inherited;
 end;
 
 function TGameGrid.GetItem(X, Y: integer): TGameItem;
 begin
-  // TODO : à compléter
-  if random(10)<3 then
-  result := GameData.Current.Inventory.Get
-    (random(GameData.Current.Inventory.Count)) else result := nil;
+  if assigned(FGrid) and FGrid.containskey(X) and FGrid.Items[X].containskey(Y)
+  then
+    result := FGrid.Items[X].Items[Y]
+  else
+    result := nil;
 end;
 
 procedure TGameGrid.LoadFromStream(AStrem: TStream);
 begin
   // TODO : à compléter
+end;
+
+procedure TGameGrid.RemoveItem(X, Y: integer);
+begin
+  if assigned(GetItem(X, Y)) then
+    FGrid.Items[X].Remove(Y);
 end;
 
 procedure TGameGrid.SaveToStream(AStream: TStream);
@@ -256,7 +281,13 @@ end;
 
 procedure TGameGrid.SetItem(X, Y: integer; Item: TGameItem);
 begin
-  // TODO : à compléter
+  if assigned(FGrid) then
+  begin
+    if not FGrid.containskey(X) then
+      FGrid.Add(X, TRowList.Create);
+
+    FGrid.Items[X].AddOrSetValue(Y, Item);
+  end;
 end;
 
 { TGameInventory }
@@ -268,7 +299,8 @@ end;
 
 procedure TInventory.Clear;
 begin
-  Items.Clear;
+  while (Items.Count > 0) do
+    Items[0].Free; // the element remove itself from the list, no delete() to do here
 end;
 
 constructor TInventory.Create;
@@ -305,11 +337,6 @@ begin
   Items.Remove(Item);
 end;
 
-procedure TInventory.Remove(Index: integer);
-begin
-  Items.Delete(index);
-end;
-
 procedure TInventory.SaveToStream(AStream: TStream);
 begin
   // TODO : à compléter
@@ -322,6 +349,13 @@ begin
   Parent := Inventory;
   if assigned(Inventory) then
     Inventory.Add(self);
+end;
+
+destructor TInventoryItem.Destroy;
+begin
+  if assigned(Parent) then
+    Parent.Remove(self);
+  inherited;
 end;
 
 procedure TInventoryItem.LoadFromStream(AStrem: TStream);

@@ -14,18 +14,35 @@ type
     ItemCount: TText;
     ItemCountBackground: TEllipse;
     procedure FrameResize(Sender: TObject);
+    procedure FrameClick(Sender: TObject);
   private
     FInventoryItem: TInventoryItem;
+    FActive: boolean;
+    FOnSelectInventoryItem: tnotifyevent;
+    FOnUnSelectInventoryItem: tnotifyevent;
     procedure SetInventoryItem(const Value: TInventoryItem);
-    function GetCountLabel: string;
-    procedure SetCountLabel(const Value: string);
+    procedure SetActive(const Value: boolean);
+    procedure SetCount(const Value: integer);
+    function GetCount: integer;
     { Déclarations privées }
+    procedure KillMySelf;
+    function GetColor: TGameItemColor;
+    procedure SetOnSelectInventoryItem(const Value: tnotifyevent);
+    procedure SetOnUnSelectInventoryItem(const Value: tnotifyevent);
   public
     { Déclarations publiques }
     property InventoryItem: TInventoryItem read FInventoryItem
       write SetInventoryItem;
-    property CountLabel: string read GetCountLabel write SetCountLabel;
+    property Count: integer read GetCount write SetCount;
+    property Color: TGameItemColor read GetColor;
+    property Active: boolean read FActive write SetActive;
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property OnSelectInventoryItem: tnotifyevent read FOnSelectInventoryItem
+      write SetOnSelectInventoryItem;
+    property OnUnSelectInventoryItem: tnotifyevent read FOnUnSelectInventoryItem
+      write SetOnUnSelectInventoryItem;
+    function GetGameItem: tgameitem;
   end;
 
 implementation
@@ -37,6 +54,25 @@ constructor TcadInventoryItem.Create(AOwner: TComponent);
 begin
   inherited;
   name := ''; // avoid duplicate component name
+  FInventoryItem := nil;
+  Active := false;
+end;
+
+destructor TcadInventoryItem.Destroy;
+begin
+  FInventoryItem.Free;
+  inherited;
+end;
+
+procedure TcadInventoryItem.FrameClick(Sender: TObject);
+begin
+  Active := not Active;
+
+  if Active then
+    for var i := 0 to parent.ChildrenCount - 1 do
+      if (parent.Children[i] is TcadInventoryItem) and
+        (parent.Children[i] <> self) then
+        (parent.Children[i] as TcadInventoryItem).Active := false;
 end;
 
 procedure TcadInventoryItem.FrameResize(Sender: TObject);
@@ -44,32 +80,101 @@ begin
   width := 2 * height;
 end;
 
-function TcadInventoryItem.GetCountLabel: string;
+function TcadInventoryItem.GetColor: TGameItemColor;
 begin
-  result := ItemCount.Text;
+  if assigned(FInventoryItem) then
+    result := FInventoryItem.Color
+  else
+    result := 0; // transparent color
 end;
 
-procedure TcadInventoryItem.SetCountLabel(const Value: string);
+function TcadInventoryItem.GetCount: integer;
 begin
-  ItemCount.Text := Value;
+  if assigned(FInventoryItem) then
+    result := FInventoryItem.Count
+  else
+    result := 0;
+end;
+
+function TcadInventoryItem.GetGameItem: tgameitem;
+begin
+  result := tgameitem.Create;
+  result.State := TGameItemState.first; // TODO : à compléter
+  if assigned(FInventoryItem) then
+    result.Color := FInventoryItem.Color
+  else
+    result.Color := 0; // transparent color
+  result.Duration := 0;
+end;
+
+procedure TcadInventoryItem.KillMySelf;
+begin
+  Active := false;
+  tthread.forcequeue(nil,
+    procedure
+    begin
+      self.Free;
+      // If no inventory item attached, then kill Self next program loop
+    end);
+end;
+
+procedure TcadInventoryItem.SetActive(const Value: boolean);
+begin
+  if Value then
+  begin
+    Background.Stroke.Color := talphacolors.green;
+    Background.Stroke.Thickness := 3;
+  end
+  else
+  begin
+    Background.Stroke.Color := talphacolors.black;
+    Background.Stroke.Thickness := 1;
+  end;
+
+  if (FActive <> Value) then
+  begin
+    FActive := Value;
+    if FActive then
+    begin
+      if assigned(OnSelectInventoryItem) then
+        OnSelectInventoryItem(self);
+    end
+    else if assigned(OnUnSelectInventoryItem) then
+      OnUnSelectInventoryItem(self);
+  end;
+end;
+
+procedure TcadInventoryItem.SetCount(const Value: integer);
+begin
+  ItemCount.Text := Value.ToString;
+  if (Value < 1) then
+    KillMySelf
+  else if assigned(FInventoryItem) then
+    FInventoryItem.Count := Value;
 end;
 
 procedure TcadInventoryItem.SetInventoryItem(const Value: TInventoryItem);
 begin
-  if assigned(Value) or (FInventoryItem.Count < 1) then
+  if assigned(Value) and (Value.Count > 0) then
   begin
     FInventoryItem := Value;
     Background.Fill.Color := FInventoryItem.Color;
-    CountLabel := FInventoryItem.Count.ToString;
+    ItemCount.Text := FInventoryItem.Count.ToString;
     // TODO : add event to link inventory item and its display
   end
-  else
-    tthread.forcequeue(nil,
-      procedure
-      begin
-        Self.Free;
-        // If no inventory item attached, then kill Self next program loop
-      end);
+  else // TODO: potential memory lost if value assigned with count=0
+    KillMySelf;
+end;
+
+procedure TcadInventoryItem.SetOnSelectInventoryItem(const Value: tnotifyevent);
+begin
+  FOnSelectInventoryItem := Value;
+end;
+
+procedure TcadInventoryItem.SetOnUnSelectInventoryItem
+  (const Value: tnotifyevent);
+begin
+  FOnUnSelectInventoryItem := Value;
 end;
 
 end.

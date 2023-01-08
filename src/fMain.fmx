@@ -157,6 +157,7 @@ object frmMain: TfrmMain
     Size.PlatformDefault = False
     TabOrder = 2
     object GameGrid: TImage
+      OnTap = GameGridTap
       MultiResBitmap = <
         item
         end>
@@ -169,6 +170,7 @@ object frmMain: TfrmMain
       Size.Height = 440.000000000000000000
       Size.PlatformDefault = False
       WrapMode = Original
+      OnMouseDown = GameGridMouseDown
       OnResize = GameGridResize
     end
     object PlayerInventory: TRectangle

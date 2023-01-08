@@ -3,18 +3,17 @@ object cadInventoryItem: TcadInventoryItem
   Margins.Left = 5.000000000000000000
   Margins.Top = 5.000000000000000000
   Margins.Bottom = 5.000000000000000000
-  Position.X = 5.000000000000000000
-  Position.Y = 5.000000000000000000
   Size.Width = 320.000000000000000000
-  Size.Height = 79.000000000000000000
+  Size.Height = 0.000000000000000000
   Size.PlatformDefault = False
+  OnClick = FrameClick
   OnResize = FrameResize
   object Background: TRectangle
     Align = Contents
     Locked = True
     HitTest = False
     Size.Width = 320.000000000000000000
-    Size.Height = 79.000000000000000000
+    Size.Height = 0.000000000000000000
     Size.PlatformDefault = False
   end
   object ItemCountBackground: TEllipse

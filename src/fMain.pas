@@ -7,7 +7,7 @@ uses
   System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.Layouts,
   FMX.Objects, FMX.Ani, FMX.StdCtrls, FMX.Controls.Presentation, cButton,
-  FMX.DzHTMLText;
+  FMX.DzHTMLText, cInventoryItem;
 
 Const
   CDefaultMarginsTop = 5;
@@ -57,10 +57,18 @@ type
       Shift: TShiftState);
     procedure btnPauseGameClick(Sender: TObject);
     procedure GameGridResize(Sender: TObject);
+    procedure GameGridTap(Sender: TObject; const Point: TPointF);
+    procedure GameGridMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Single);
   private
     { Déclarations privées }
     DisplayedScreen: TLayout;
     GridViewportX, GridViewportY: integer;
+    GameStarted: boolean;
+    SelectedInventoryItem: TcadInventoryItem;
+    procedure SelectInventoryItem(Sender: TObject);
+    procedure UnSelectInventoryItem(Sender: TObject);
+    procedure ClickOnGameGrid(X, Y: Single);
   public
     { Déclarations publiques }
     procedure DisplayScreen(ScreenToDisplay: TGameScreen);
@@ -81,7 +89,7 @@ implementation
 
 {$R *.fmx}
 
-uses uGameData, cInventoryItem;
+uses uGameData;
 
 procedure TfrmMain.animHideScreenFinish(Sender: TObject);
 begin
@@ -151,6 +159,47 @@ begin
       end;
   finally
     ScreenHomeMenu.endupdate;
+  end;
+end;
+
+procedure TfrmMain.ClickOnGameGrid(X, Y: Single);
+var
+  col, row: integer;
+  NbCol, NbRow: integer;
+  GameData: tgamedata;
+  Grid: TGameGrid;
+begin
+  if assigned(SelectedInventoryItem) then
+  begin
+    // color selected => put color on the game grid
+
+    // Nb displayed col/row
+    NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
+    NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
+
+    // local coordinates to absolute coordinates
+    col := trunc(X / CGameCellSize) + GridViewportX - NbCol div 2;
+    row := trunc(Y / CGameCellSize) + GridViewportY - NbRow div 2;
+
+    GameData := tgamedata.Current;
+    Grid := GameData.GameGrid;
+
+    if assigned(Grid.GetItem(col, row)) then
+    begin
+      // already something there
+      // TODO : à compléter
+    end
+    else
+    begin
+      // nothing at this position
+      Grid.SetItem(col, row, SelectedInventoryItem.GetGameItem);
+      SelectedInventoryItem.Count := SelectedInventoryItem.Count - 1;
+      RefreshGameGrid; // TODO : draw only this cell, not the grid
+    end;
+  end
+  else
+  begin
+    // no color selected, harvest actual grid cell or move screen (?) or zoom (?)
   end;
 end;
 
@@ -240,6 +289,7 @@ begin
       (Children[i] as TLayout).Visible := false;
 
   DisplayedScreen := nil;
+  GameStarted := false;
 
   // Defer Home screen display
   tthread.ForceQueue(nil,
@@ -300,11 +350,22 @@ begin
   end;
 end;
 
+procedure TfrmMain.GameGridMouseDown(Sender: TObject; Button: TMouseButton;
+Shift: TShiftState; X, Y: Single);
+begin
+  ClickOnGameGrid(X, Y);
+end;
+
 procedure TfrmMain.GameGridResize(Sender: TObject);
 begin
   GameGrid.Bitmap.SetSize(trunc(GameGrid.Width), trunc(GameGrid.Height));
   if (ScreenGame.Visible) then
     RefreshGameGrid;
+end;
+
+procedure TfrmMain.GameGridTap(Sender: TObject; const Point: TPointF);
+begin
+  ClickOnGameGrid(Point.X, Point.Y);
 end;
 
 procedure TfrmMain.InitCreditScreen;
@@ -315,28 +376,35 @@ end;
 
 procedure TfrmMain.InitGameStart(ContinuePreviousGame: boolean);
 var
-  GameData: TGameData;
-  InventoryItemBox: tcadInventoryItem;
+  GameData: tgamedata;
+  InventoryItemBox: TcadInventoryItem;
 begin
+  SelectedInventoryItem := nil;
+
+  // Init the game screen
+  while PlayerInventory.ChildrenCount > 0 do
+    PlayerInventory.Children[0].Free;
+
   // Init or load game data
-  GameData := TGameData.Current;
+  GameData := tgamedata.Current;
   if ContinuePreviousGame then
     GameData.LoadFromFile('PreviousGameData')
     // TODO : change game data filename
   else
     GameData.NewGame;
 
-  // Init the game screen
-  while PlayerInventory.ChildrenCount > 0 do
-    PlayerInventory.Children[0].Free;
+  GameStarted := true;
 
-  for var i := 0 to GameData.inventory.count - 1 do
+  for var i := 0 to GameData.inventory.Count - 1 do
   begin
-    InventoryItemBox := tcadInventoryItem.Create(Self);
+    InventoryItemBox := TcadInventoryItem.Create(Self);
     InventoryItemBox.Parent := PlayerInventory;
+    InventoryItemBox.OnSelectInventoryItem := SelectInventoryItem;
+    InventoryItemBox.OnunSelectInventoryItem := UnSelectInventoryItem;
     InventoryItemBox.InventoryItem := GameData.inventory.Get(i);
   end;
 
+  // The viewport (X,Y) is the center of the screen, not the top/left coordinates
   GridViewportX := CGameGridWidth div 2;
   GridViewportY := CGameGridHeight div 2;
 
@@ -378,20 +446,24 @@ end;
 procedure TfrmMain.PauseGame;
 begin
   // TODO : do what is needed when the game is stopped
-
+  GameStarted := false;
   DisplayScreen(TGameScreen.Home);
 end;
 
 procedure TfrmMain.RefreshGameGrid;
 var
   NbCol, NbRow: integer;
-  GameData: TGameData;
+  GameData: tgamedata;
   item: TGameItem;
   GridCanvas: tcanvas;
-  x, Y, w, h: single;
-  bmpscale: single;
+  X, Y, w, h: Single;
+  bmpscale: Single;
+  i, j: integer;
 begin
-  GameData := TGameData.Current;
+  if not GameStarted then
+    exit;
+
+  GameData := tgamedata.Current;
 
   NbCol := (trunc(GameGrid.Width) div CGameCellSize) + 1;
   NbRow := (trunc(GameGrid.Height) div CGameCellSize) + 1;
@@ -403,20 +475,21 @@ begin
     GridCanvas.BeginScene;
     try
       GridCanvas.Clear(talphacolors.Darkorange);
-      for var i := 0 to NbCol - 1 do
-        for var j := 0 to NbRow - 1 do
+      for i := 0 to NbCol - 1 do
+        for j := 0 to NbRow - 1 do
         begin
-          item := GameData.GameGrid.GetItem(GridViewportX + i,
-            GridViewportY + j);
+          // Viewport(x,y) is the center, we need the displayed cell on top/left of the screen
+          item := GameData.GameGrid.GetItem(GridViewportX + i - NbCol div 2,
+            GridViewportY + j - NbRow div 2);
           if assigned(item) then
           begin
-            x := i * CGameCellSize * bmpscale;
+            X := i * CGameCellSize * bmpscale;
             Y := j * CGameCellSize * bmpscale;
             w := CGameCellSize * bmpscale;
             h := CGameCellSize * bmpscale;
             GridCanvas.Fill.Color := item.Color;
             GridCanvas.Fill.Kind := TBrushKind.Solid;
-            GridCanvas.FillRect(trectf.Create(x, Y, x + w, Y + h), 1);
+            GridCanvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
           end;
         end;
     finally
@@ -425,6 +498,19 @@ begin
   finally
     GameGrid.endupdate;
   end;
+end;
+
+procedure TfrmMain.SelectInventoryItem(Sender: TObject);
+begin
+  if (Sender is TcadInventoryItem) then
+    SelectedInventoryItem := (Sender as TcadInventoryItem);
+end;
+
+procedure TfrmMain.UnSelectInventoryItem(Sender: TObject);
+begin
+  if (Sender is TcadInventoryItem) and
+    (SelectedInventoryItem = (Sender as TcadInventoryItem)) then
+    SelectedInventoryItem := nil;
 end;
 
 initialization
