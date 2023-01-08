@@ -57,3 +57,30 @@ Données manipulées dans une partie :
 Données manipulées par l'affichage de l'écran de jeu :
 
 - coordonnées de départ de l'écran (viewport) et largeur/hauteur de la grille affichée
+
+-----
+
+* changer la couleur des cases mortes
+=> $FFAA9E88
+
+* changer la couleur des cases de compost
+=> $FFF5E475
+
+* changer la couleur du background du jeu => $FFA37929
+
+-----
+
+* icones from Adobe Stock 303523361
+0-soleil
+1-poubelle recyclable => Dead
+2-recyclage => Compost
+3-pouce dans la main
+4-jeune pouce => Planted
+5-smiley bof => Rotten
+6-arbre => Mature
+7-panier
+9-recyclage feuille
+
+-----
+
+* assets license : "pause button svg" from https://materialdesignicons.com/icon/pause
