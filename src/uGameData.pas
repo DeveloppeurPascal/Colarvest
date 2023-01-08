@@ -6,30 +6,47 @@ uses
   System.Classes, System.Generics.Collections, System.UITypes;
 
 Const
-  CNbItemByDefaut = 5;
-  CItemCountByDefault = 10;
+  CNbItemByDefaut = 6; // Default items in inventory
+  CItemCountByDefault = 10; // Default number of each item in inventory
   CGameGridWidth = 100;
   CGameGridHeight = 100;
 
 type
 {$SCOPEDENUMS ON}
-  TGameItemState = (first, medium, last, dead); // TODO : à changer
-  TGameItemColor = TAlphaColor; // RVBA colors
+  TGameItemState = (Nothing, Planted, Mature, Rotten, Dead, Compost);
+  TGameItemColor = TAlphaColor; // ARVB colors (alpha, red, green, blue)
 
   TGameItem = class
   private
     FState: TGameItemState;
     FColor: TGameItemColor;
     FDuration: integer;
+    FX: integer;
+    FY: integer;
+    FOnStateChange: TNotifyEvent;
+    FOnColorChange: TNotifyEvent;
     procedure SetColor(const Value: TGameItemColor);
     procedure SetDuration(const Value: integer);
     procedure SetState(const Value: TGameItemState);
+    procedure SetX(const Value: integer);
+    procedure SetY(const Value: integer);
+    procedure SetOnStateChange(const Value: TNotifyEvent);
+    procedure SetOnColorChange(const Value: TNotifyEvent);
   public
     property State: TGameItemState read FState write SetState;
+    property OnStateChange: TNotifyEvent read FOnStateChange
+      write SetOnStateChange;
     property Color: TGameItemColor read FColor write SetColor;
+    property OnColorChange: TNotifyEvent read FOnColorChange
+      write SetOnColorChange;
     property Duration: integer read FDuration write SetDuration;
+    property X: integer read FX write SetX;
+    property Y: integer read FY write SetY;
     procedure SaveToStream(AStream: TStream); virtual;
     procedure LoadFromStream(AStrem: TStream); virtual;
+    procedure ExecGameLoop;
+    constructor Create; overload; Virtual;
+    constructor Create(AX, AY: integer); overload; Virtual;
   end;
 
   TRowList = TObjectDictionary<integer, TGameItem>;
@@ -47,6 +64,7 @@ type
     procedure Clear;
     constructor Create; virtual;
     destructor Destroy; override;
+    procedure ExecGameLoop;
   end;
 
   TInventory = class;
@@ -59,7 +77,7 @@ type
     Parent: TInventory;
   public
     property Count: integer read FCount write SetCount;
-    constructor Create(Inventory: TInventory); virtual;
+    constructor Create(Inventory: TInventory); overload; virtual;
     destructor Destroy; override;
     procedure SaveToStream(AStream: TStream); override;
     procedure LoadFromStream(AStrem: TStream); override;
@@ -101,9 +119,13 @@ type
     class function Current: TGameData;
     constructor Create; virtual;
     destructor Destroy; override;
+    procedure ExecGameLoop;
   end;
 
 implementation
+
+uses
+  System.SysUtils;
 
 var
   GameData: TGameData;
@@ -131,6 +153,11 @@ begin
   FGameGrid.Free;
   FInventory.Free;
   inherited;
+end;
+
+procedure TGameData.ExecGameLoop;
+begin
+  GameGrid.ExecGameLoop;
 end;
 
 procedure TGameData.Clear;
@@ -170,14 +197,29 @@ begin
   Clear;
 
   // init Inventory with default values
-  for var i := 1 to CNbItemByDefaut do
+  for var i := 0 to CNbItemByDefaut - 1 do
   begin
     Item := TInventoryItem.Create(Inventory);
     Item.Count := CItemCountByDefault;
-    Item.Color := TAlphaColorRec.Alpha or
-      TAlphaColor((random(256) { R } * 256 + random(256) { V } ) * 256 +
-      random(256) { B } );
-    // TODO : change the color by default
+    case i of
+      5:
+        Item.Color := talphacolorrec.Red;
+      4:
+        Item.Color := talphacolorrec.orange;
+      3:
+        Item.Color := talphacolorrec.yellow;
+      2:
+        Item.Color := talphacolorrec.green;
+      1:
+        Item.Color := talphacolorrec.darkblue;
+      0:
+        Item.Color := talphacolorrec.Darkviolet;
+    else
+      raise exception.Create('No default color available !');
+    end;
+    // Item.Color := TAlphaColorRec.Alpha or
+    // TAlphaColor((random(256) { R } * 256 + random(256) { V } ) * 256 +
+    // random(256) { B } );
   end;
 end;
 
@@ -211,6 +253,57 @@ end;
 
 { TGameItem }
 
+constructor TGameItem.Create;
+begin
+  FState := TGameItemState.Nothing;
+  FColor := 0;
+  FDuration := 0;
+  FX := -1;
+  FY := -1;
+end;
+
+constructor TGameItem.Create(AX, AY: integer);
+begin
+  Create;
+  X := AX;
+  Y := AY;
+end;
+
+procedure TGameItem.ExecGameLoop;
+var
+  colrec: talphacolorrec;
+begin
+  Duration := Duration + 1;
+
+  if Duration > 160 then
+    // TODO : kill my self
+  else if Duration > 110 then
+    State := TGameItemState.Compost
+  else if Duration > 80 then
+  begin
+    State := TGameItemState.Dead;
+  end
+  else if Duration > 60 then
+    State := TGameItemState.Rotten
+  else if Duration > 30 then
+    State := TGameItemState.Mature;
+
+  if (Duration > 0) then
+    case State of
+      TGameItemState.Rotten, TGameItemState.Mature, TGameItemState.Compost:
+        begin
+          colrec := talphacolorrec.Create(Color);
+          if (colrec.R < 255) then
+            colrec.R := colrec.R + 1;
+          if (colrec.g < 255) then
+            colrec.g := colrec.g + 1;
+          if (colrec.b < 255) then
+            colrec.b := colrec.b + 1;
+          Color := colrec.Color;
+        end;
+    end;
+end;
+
 procedure TGameItem.LoadFromStream(AStrem: TStream);
 begin
   // TODO : à compléter
@@ -223,7 +316,12 @@ end;
 
 procedure TGameItem.SetColor(const Value: TGameItemColor);
 begin
-  FColor := Value;
+  if (FColor <> Value) then
+  begin
+    FColor := Value;
+    if assigned(OnColorChange) then
+      OnColorChange(Self);
+  end;
 end;
 
 procedure TGameItem.SetDuration(const Value: integer);
@@ -231,9 +329,40 @@ begin
   FDuration := Value;
 end;
 
+procedure TGameItem.SetOnColorChange(const Value: TNotifyEvent);
+begin
+  FOnColorChange := Value;
+end;
+
+procedure TGameItem.SetOnStateChange(const Value: TNotifyEvent);
+begin
+  FOnStateChange := Value;
+end;
+
 procedure TGameItem.SetState(const Value: TGameItemState);
 begin
-  FState := Value;
+  if (FState <> Value) then
+  begin
+    FState := Value;
+    if assigned(OnStateChange) then
+      OnStateChange(Self);
+  end;
+end;
+
+procedure TGameItem.SetX(const Value: integer);
+begin
+  if (Value >= 0) and (Value < CGameGridWidth) then
+    FX := Value
+  else
+    FX := -1;
+end;
+
+procedure TGameItem.SetY(const Value: integer);
+begin
+  if (Value >= 0) and (Value < CGameGridHeight) then
+    FY := Value
+  else
+    FY := -1;
 end;
 
 { TGameGrid }
@@ -250,8 +379,16 @@ end;
 
 destructor TGameGrid.Destroy;
 begin
+  // TODO : check why TObjectDictionary don't destroy objects (check "clear" method)
   FGrid.Free;
   inherited;
+end;
+
+procedure TGameGrid.ExecGameLoop;
+begin
+  for var lignes in FGrid.Values do
+    for var Item in lignes.Values do
+      Item.ExecGameLoop;
 end;
 
 function TGameGrid.GetItem(X, Y: integer): TGameItem;
@@ -287,6 +424,8 @@ begin
       FGrid.Add(X, TRowList.Create);
 
     FGrid.Items[X].AddOrSetValue(Y, Item);
+    Item.X := X;
+    Item.Y := Y;
   end;
 end;
 
@@ -300,7 +439,8 @@ end;
 procedure TInventory.Clear;
 begin
   while (Items.Count > 0) do
-    Items[0].Free; // the element remove itself from the list, no delete() to do here
+    Items[0].Free;
+  // the element remove itself from the list, no delete() to do here
 end;
 
 constructor TInventory.Create;
@@ -346,15 +486,16 @@ end;
 
 constructor TInventoryItem.Create(Inventory: TInventory);
 begin
+  inherited Create;
   Parent := Inventory;
   if assigned(Inventory) then
-    Inventory.Add(self);
+    Inventory.Add(Self);
 end;
 
 destructor TInventoryItem.Destroy;
 begin
   if assigned(Parent) then
-    Parent.Remove(self);
+    Parent.Remove(Self);
   inherited;
 end;
 

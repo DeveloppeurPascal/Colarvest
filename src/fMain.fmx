@@ -330,4 +330,9 @@ object frmMain: TfrmMain
       TabOrder = 0
     end
   end
+  object GameLoop: TTimer
+    OnTimer = GameLoopTimer
+    Left = 304
+    Top = 224
+  end
 end

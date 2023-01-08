@@ -44,6 +44,7 @@ type
     btnPauseGame: TRectangle;
     btnPauseGameSVG: TPath;
     GameGrid: TImage;
+    GameLoop: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure animHideScreenFinish(Sender: TObject);
     procedure animShowScreenFinish(Sender: TObject);
@@ -60,6 +61,7 @@ type
     procedure GameGridTap(Sender: TObject; const Point: TPointF);
     procedure GameGridMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Single);
+    procedure GameLoopTimer(Sender: TObject);
   private
     { Déclarations privées }
     DisplayedScreen: TLayout;
@@ -69,6 +71,8 @@ type
     procedure SelectInventoryItem(Sender: TObject);
     procedure UnSelectInventoryItem(Sender: TObject);
     procedure ClickOnGameGrid(X, Y: Single);
+    procedure GameItemStateChanged(Sender: TObject);
+    procedure GameItemColorChanged(Sender: TObject);
   public
     { Déclarations publiques }
     procedure DisplayScreen(ScreenToDisplay: TGameScreen);
@@ -89,7 +93,7 @@ implementation
 
 {$R *.fmx}
 
-uses uGameData;
+uses uGameData, udmLDJam52_Icones_AS303523361;
 
 procedure TfrmMain.animHideScreenFinish(Sender: TObject);
 begin
@@ -192,7 +196,11 @@ begin
     else
     begin
       // nothing at this position
-      Grid.SetItem(col, row, SelectedInventoryItem.GetGameItem);
+      var
+      item := SelectedInventoryItem.GetGameItem;
+      Grid.SetItem(col, row, item);
+      item.onstatechange := GameItemStateChanged;
+      item.OnColorChange := GameItemColorChanged;
       SelectedInventoryItem.Count := SelectedInventoryItem.Count - 1;
       RefreshGameGrid; // TODO : draw only this cell, not the grid
     end;
@@ -368,6 +376,28 @@ begin
   ClickOnGameGrid(Point.X, Point.Y);
 end;
 
+procedure TfrmMain.GameItemColorChanged(Sender: TObject);
+var
+  item: tgameitem;
+begin
+  if not(Sender is tgameitem) then
+    exit;
+
+  RefreshGameGrid; // TODO : refresh only this element if its displayed
+end;
+
+procedure TfrmMain.GameItemStateChanged(Sender: TObject);
+var
+  item: tgameitem;
+begin
+  if not(Sender is tgameitem) then
+    exit;
+
+  item := Sender as tgameitem;
+
+  // TODO : à compléter
+end;
+
 procedure TfrmMain.InitCreditScreen;
 begin
   ScreenCreditContent.margins.top := GameTitle.Position.Y + GameTitle.Height +
@@ -408,9 +438,13 @@ begin
   GridViewportX := CGameGridWidth div 2;
   GridViewportY := CGameGridHeight div 2;
 
+  // Show the game grid
   RefreshGameGrid;
 
   // TODO : à compléter
+
+  // Last operation : starting the game loop
+  GameLoop.enabled := true;
 end;
 
 procedure TfrmMain.InitGameText;
@@ -454,11 +488,13 @@ procedure TfrmMain.RefreshGameGrid;
 var
   NbCol, NbRow: integer;
   GameData: tgamedata;
-  item: TGameItem;
+  item: tgameitem;
   GridCanvas: tcanvas;
   X, Y, w, h: Single;
   bmpscale: Single;
   i, j: integer;
+  bmp: tbitmap;
+  s: tsizef;
 begin
   if not GameStarted then
     exit;
@@ -490,6 +526,23 @@ begin
             GridCanvas.Fill.Color := item.Color;
             GridCanvas.Fill.Kind := TBrushKind.Solid;
             GridCanvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
+            s := tsizef.Create(2 * w / 3, 2 * h / 3);
+            case item.State of
+              TGameItemState.Planted:
+                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 4);
+              TGameItemState.Mature:
+                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 6);
+              TGameItemState.Rotten:
+                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 5);
+              TGameItemState.Dead:
+                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 1);
+              TGameItemState.compost:
+                bmp := dmLDJam52_Icones_AS303523361.ImageList.Bitmap(s, 2);
+            else
+              raise exception.Create('No icon for this item state.');
+            end;
+            GridCanvas.DrawBitmap(bmp, bmp.boundsf, trectf.Create(X, Y, X + w,
+              Y + h), 1);// TODO : add margin to destination
           end;
         end;
     finally
@@ -504,6 +557,17 @@ procedure TfrmMain.SelectInventoryItem(Sender: TObject);
 begin
   if (Sender is TcadInventoryItem) then
     SelectedInventoryItem := (Sender as TcadInventoryItem);
+end;
+
+procedure TfrmMain.GameLoopTimer(Sender: TObject);
+begin
+  if not GameStarted then
+  begin
+    GameLoop.enabled := false;
+    exit;
+  end;
+
+  tgamedata.Current.ExecGameLoop;
 end;
 
 procedure TfrmMain.UnSelectInventoryItem(Sender: TObject);

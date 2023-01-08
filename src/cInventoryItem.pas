@@ -99,7 +99,7 @@ end;
 function TcadInventoryItem.GetGameItem: tgameitem;
 begin
   result := tgameitem.Create;
-  result.State := TGameItemState.first; // TODO : à compléter
+  result.State := TGameItemState.planted;
   if assigned(FInventoryItem) then
     result.Color := FInventoryItem.Color
   else
