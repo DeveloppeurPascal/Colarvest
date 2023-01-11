@@ -368,7 +368,6 @@ begin
   else
   begin
     Canvas.Fill.Color := cgridcolor;
-    // TODO : grid background color
     Canvas.Fill.Kind := TBrushKind.Solid;
     Canvas.FillRect(trectf.Create(X, Y, X + w, Y + h), 1);
   end;
@@ -562,7 +561,6 @@ end;
 procedure TfrmMain.InitGameStart(ContinuePreviousGame: boolean);
 var
   GameData: tgamedata;
-  InventoryItemBox: TcadInventoryItem;
 begin
   BackgroundImage.Fill.Color := talphacolors.black;
 

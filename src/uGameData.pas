@@ -425,7 +425,6 @@ end;
 
 destructor TGameGrid.Destroy;
 begin
-  // TODO : check why TObjectDictionary don't destroy objects (check "clear" method)
   FGrid.Free;
   inherited;
 end;
@@ -455,7 +454,6 @@ procedure TGameGrid.RemoveItem(X, Y: integer);
 begin
   if assigned(GetItem(X, Y)) then
     FGrid.Items[X].Remove(Y);
-  // TODO : fuite de mémoire possible si TObjectDictionary foireux
 end;
 
 procedure TGameGrid.SaveToStream(AStream: TStream);
