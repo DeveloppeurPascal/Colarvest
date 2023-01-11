@@ -1,4 +1,4 @@
-# Delphi-Projects-Template
+# Colarvest (LDJam 52)
 
 [This page in english.](README.md)
 
