@@ -606,6 +606,8 @@ begin
   btnBackFromCredits.Text.Text := 'Home';
   btnBackFromSettings.Text.Text := 'Home';
 
+  GameTitleText.Text := 'Colarvest';
+
   ScreenCreditText.BeginUpdate;
   try
     ScreenCreditText.Text := '<b>' + GameTitleText.Text + '</b><br>' +
