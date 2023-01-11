@@ -173,9 +173,10 @@ object frmMain: TfrmMain
       OnMouseDown = GameGridMouseDown
       OnResize = GameGridResize
     end
-    object PlayerInventory: TRectangle
+    object PlayerInventoryBackground: TRectangle
       Align = Bottom
       Fill.Color = claLightcyan
+      HitTest = False
       Padding.Left = 20.000000000000000000
       Padding.Top = 5.000000000000000000
       Padding.Right = 20.000000000000000000
@@ -192,6 +193,15 @@ object frmMain: TfrmMain
       Stroke.Thickness = 3.000000000000000000
       XRadius = 30.000000000000000000
       YRadius = 30.000000000000000000
+      object PlayerInventory: THorzScrollBox
+        Align = Client
+        Size.Width = 500.000000000000000000
+        Size.Height = 50.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 0
+        Viewport.Width = 500.000000000000000000
+        Viewport.Height = 50.000000000000000000
+      end
     end
     object btnPauseGame: TRectangle
       Fill.Color = claBisque

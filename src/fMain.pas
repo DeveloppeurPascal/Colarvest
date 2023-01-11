@@ -40,11 +40,12 @@ type
     ScreenCreditContent: TVertScrollBox;
     ScreenCreditText: TDzHTMLText;
     ScreenSettingsContent: TVertScrollBox;
-    PlayerInventory: TRectangle;
+    PlayerInventoryBackground: TRectangle;
     btnPauseGame: TRectangle;
     btnPauseGameSVG: TPath;
     GameGrid: TImage;
     GameLoop: TTimer;
+    PlayerInventory: THorzScrollBox;
     procedure FormCreate(Sender: TObject);
     procedure animHideScreenFinish(Sender: TObject);
     procedure animShowScreenFinish(Sender: TObject);
@@ -567,8 +568,8 @@ begin
   SelectedInventoryItem := nil;
 
   // Init the game screen
-  while PlayerInventory.ChildrenCount > 0 do
-    PlayerInventory.Children[0].Free;
+  while PlayerInventory.content.ChildrenCount > 0 do
+    PlayerInventory.content.Children[0].Free;
 
   // Init or load game data
   GameData := tgamedata.Current;

@@ -4,6 +4,7 @@
 
 * named the game as "Colarvest" instead of Project1
 * updated version info for deployment in all platforms
+* added a scroll box to choose colors in portrait mode for smartphones
 
 ## Fixed
 
