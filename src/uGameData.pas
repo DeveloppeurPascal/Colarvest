@@ -420,7 +420,7 @@ end;
 
 constructor TGameGrid.Create;
 begin
-  FGrid := TColList.Create;
+  FGrid := TColList.Create([doOwnsValues]);
 end;
 
 destructor TGameGrid.Destroy;
@@ -466,7 +466,7 @@ begin
   if assigned(FGrid) then
   begin
     if not FGrid.containskey(X) then
-      FGrid.Add(X, TRowList.Create);
+      FGrid.Add(X, TRowList.Create([doOwnsValues]));
 
     FGrid.Items[X].AddOrSetValue(Y, Item);
     Item.X := X;
