@@ -10,3 +10,4 @@
 
 * fixed : in game image resolution and box position on High DPI screens
 * fixed : in game click coordinates on High DPI screens
+* fixed : removed "exit" menu button for Android and iOS

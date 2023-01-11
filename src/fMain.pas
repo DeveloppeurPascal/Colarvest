@@ -472,6 +472,7 @@ begin
 {$IF Defined(IOS) or Defined(ANDROID)}
   // remove EXIT button on iOS&Android
   btnMenuExit.enabled := false;
+  btnMenuExit.Visible := false;
 {$ENDIF}
   CalcScreenHomeMenuHeight;
 end;
