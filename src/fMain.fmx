@@ -326,18 +326,15 @@ object frmMain: TfrmMain
     Size.Width = 640.000000000000000000
     Size.Height = 89.000000000000000000
     Size.PlatformDefault = False
-    Visible = False
     TabOrder = 5
-    object GameTitleText: TLabel
-      Align = Center
-      AutoSize = True
-      StyledSettings = [Family, Style, FontColor]
-      Size.Width = 340.000000000000000000
-      Size.Height = 67.000000000000000000
+    object GameTitleText: TText
+      Align = Client
+      HitTest = False
+      Size.Width = 640.000000000000000000
+      Size.Height = 89.000000000000000000
       Size.PlatformDefault = False
+      Text = 'titre du jeu'
       TextSettings.Font.Size = 50.000000000000000000
-      Text = 'Game Title'
-      TabOrder = 0
     end
   end
   object GameLoop: TTimer

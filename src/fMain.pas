@@ -28,7 +28,6 @@ type
     animHideScreen: TFloatAnimation;
     animShowScreen: TFloatAnimation;
     GameTitle: TLayout;
-    GameTitleText: TLabel;
     ScreenHomeMenu: TLayout;
     btnMenuExit: TcadButton;
     btnMenuCredits: TcadButton;
@@ -46,6 +45,7 @@ type
     GameGrid: TImage;
     GameLoop: TTimer;
     PlayerInventory: THorzScrollBox;
+    GameTitleText: TText;
     procedure FormCreate(Sender: TObject);
     procedure animHideScreenFinish(Sender: TObject);
     procedure animShowScreenFinish(Sender: TObject);
