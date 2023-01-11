@@ -86,8 +86,7 @@ type
     procedure RefreshGameGrid;
     procedure DrawGameItem(item: tgameitem);
     procedure DrawGameCell(col, lig: integer);
-    procedure DrawCell(X, Y: Single; Canvas: TCanvas; BitmapScale: Single;
-      item: tgameitem);
+    procedure DrawCell(X, Y: Single; Canvas: TCanvas; item: tgameitem);
     procedure AddInventoryItemButton(InventoryItem: TInventoryItem);
   end;
 
@@ -334,15 +333,14 @@ begin
     TGameScreen.Options]);
 end;
 
-procedure TfrmMain.DrawCell(X, Y: Single; Canvas: TCanvas; BitmapScale: Single;
-item: tgameitem);
+procedure TfrmMain.DrawCell(X, Y: Single; Canvas: TCanvas; item: tgameitem);
 var
   w, h: Single;
   bmp: tbitmap;
   s: tsizef;
 begin
-  w := CGameCellSize * BitmapScale;
-  h := CGameCellSize * BitmapScale;
+  w := CGameCellSize;
+  h := CGameCellSize;
   if assigned(item) then
   begin
     Canvas.Fill.Color := item.Color;
@@ -396,11 +394,9 @@ begin
     GameGrid.Bitmap.Canvas.BeginScene;
     try
       // draw the item cell and its picture
-      X := (col - GridViewportX + NbCol div 2) * CGameCellSize *
-        GameGrid.Bitmap.BitmapScale;
-      Y := (lig - GridViewportY + NbRow div 2) * CGameCellSize *
-        GameGrid.Bitmap.BitmapScale;
-      DrawCell(X, Y, GameGrid.Bitmap.Canvas, GameGrid.Bitmap.BitmapScale, nil);
+      X := (col - GridViewportX + NbCol div 2) * CGameCellSize;
+      Y := (lig - GridViewportY + NbRow div 2) * CGameCellSize;
+      DrawCell(X, Y, GameGrid.Bitmap.Canvas, nil);
     finally
       GameGrid.Bitmap.Canvas.endscene;
     end;
@@ -435,11 +431,9 @@ begin
     GameGrid.Bitmap.Canvas.BeginScene;
     try
       // draw the item cell and its picture
-      X := (item.X - GridViewportX + NbCol div 2) * CGameCellSize *
-        GameGrid.Bitmap.BitmapScale;
-      Y := (item.Y - GridViewportY + NbRow div 2) * CGameCellSize *
-        GameGrid.Bitmap.BitmapScale;
-      DrawCell(X, Y, GameGrid.Bitmap.Canvas, GameGrid.Bitmap.BitmapScale, item);
+      X := (item.X - GridViewportX + NbCol div 2) * CGameCellSize;
+      Y := (item.Y - GridViewportY + NbRow div 2) * CGameCellSize;
+      DrawCell(X, Y, GameGrid.Bitmap.Canvas, item);
     finally
       GameGrid.Bitmap.Canvas.endscene;
     end;
@@ -525,14 +519,16 @@ end;
 
 procedure TfrmMain.GameGridResize(Sender: TObject);
 begin
-  GameGrid.Bitmap.SetSize(trunc(GameGrid.Width), trunc(GameGrid.Height));
+  GameGrid.Bitmap.SetSize(trunc(GameGrid.Width * GameGrid.Bitmap.BitmapScale),
+    trunc(GameGrid.Height * GameGrid.Bitmap.BitmapScale));
   if (ScreenGame.Visible) then
     RefreshGameGrid;
 end;
 
 procedure TfrmMain.GameGridTap(Sender: TObject; const Point: TPointF);
 begin
-  ClickOnGameGrid(Point.X, Point.Y);
+  // ClickOnGameGrid(Point.X, Point.Y);
+  // onTap generate a onMouseDown
 end;
 
 procedure TfrmMain.GameItemColorChanged(Sender: TObject);
@@ -660,7 +656,6 @@ begin
     GridCanvas.BeginScene;
     try
       GridCanvas.Clear(cgridcolor);
-      // TODO : game grid background color
       for i := 0 to NbCol - 1 do
         for j := 0 to NbRow - 1 do
         begin
@@ -672,10 +667,9 @@ begin
           if assigned(item) and (item.state <> tgameitemstate.nothing) and
             (item.state <> tgameitemstate.Disable) then
           begin
-            X := i * CGameCellSize * GameGrid.Bitmap.BitmapScale;
-            Y := j * CGameCellSize * GameGrid.Bitmap.BitmapScale;
-            DrawCell(X, Y, GameGrid.Bitmap.Canvas,
-              GameGrid.Bitmap.BitmapScale, item)
+            X := i * CGameCellSize;
+            Y := j * CGameCellSize;
+            DrawCell(X, Y, GameGrid.Bitmap.Canvas, item)
           end;
         end;
     finally
