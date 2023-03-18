@@ -1,6 +1,6 @@
-[submodule "Libraries/DzHTMLText"]
-	path = Libraries/DzHTMLText
-	url = https://github.com/DeveloppeurPascal/DzHTMLText.git
 [submodule "Libraries/librairies"]
 	path = Libraries/librairies
 	url = https://github.com/DeveloppeurPascal/librairies
+[submodule "Libraries/DzHTMLText"]
+	path = Libraries/DzHTMLText
+	url = https://github.com/digao-dalpiaz/DzHTMLText.git

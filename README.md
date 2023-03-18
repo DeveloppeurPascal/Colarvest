@@ -17,7 +17,7 @@ Pour télécharger ce projet il est recommandé de passer par "git" mais vous po
 
 This project depends on :
 
-* [DeveloppeurPascal/DzHTMLText](https://github.com/DeveloppeurPascal/DzHTMLText) (fork of [digao-dalpiaz/DzHTMLText](https://github.com/digao-dalpiaz/DzHTMLText)) in folder /Libraries/DzHTMLText
+* fork of [digao-dalpiaz/DzHTMLText](https://github.com/digao-dalpiaz/DzHTMLText) in folder /Libraries/DzHTMLText
 * [DeveloppeurPascal/librairies](https://github.com/DeveloppeurPascal/librairies) in folder /Libraries/librairies
 
 ## How to ask a new feature, report a bug or a security issue ?

@@ -16,7 +16,7 @@ Pour télécharger ce projet il est recommandé de passer par "git" mais vous po
 
 Ce dépôt de code dépend des dépôts suivants :
 
-* [DeveloppeurPascal/DzHTMLText](https://github.com/DeveloppeurPascal/DzHTMLText) (fork de [digao-dalpiaz/DzHTMLText](https://github.com/digao-dalpiaz/DzHTMLText)) dans le dossier /Libraries/DzHTMLText
+* [digao-dalpiaz/DzHTMLText](https://github.com/digao-dalpiaz/DzHTMLText) dans le dossier /Libraries/DzHTMLText
 * [DeveloppeurPascal/librairies](https://github.com/DeveloppeurPascal/librairies) dans le dossier /Libraries/librairies
 
 ## Comment demander une nouvelle fonctionnalité, signaler un bogue ou une faille de sécurité ?
